@@ -4,7 +4,8 @@
 enum class ParticleID
 {
 	EMPTY,
-	SAND
+	SAND,
+	WATER
 };
 
 struct Particle
@@ -26,6 +27,9 @@ struct Particle
 			case ParticleID::SAND:
 				Rect.setFillColor(sf::Color({ 194, 194, 128 }));
 				break;
+
+			case ParticleID::WATER:
+				Rect.setFillColor(sf::Color({ 0, 0, 255 }));
 
 			default:
 				break;
@@ -52,19 +56,23 @@ int main()
 	static const uint32_t SCREEN_HEIGHT = 600;
 	static const uint32_t CELL_SIZE = 10;
 
+	// Change value every frame, and use this to allow variation in sand simulation and allow water to flow to the right
+	bool oddFrame = false;
+
 	sf::RenderWindow window(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "Pixel Particles");
-	window.setFramerateLimit(60);
+	window.setFramerateLimit(30);
 
 	// Vector of cells. Each cell will contain a particle, either empty or of a certain material. Initialize all cells to empty
 	std::vector<std::vector<Particle>> particles((int)(SCREEN_WIDTH / CELL_SIZE), std::vector<Particle>((int)(SCREEN_HEIGHT / CELL_SIZE)));
 
+	// Initialize particle positions and IDs
 	for (int y = 0; y < SCREEN_HEIGHT / CELL_SIZE; y++)
 	{
 		for (int x = 0; x < SCREEN_WIDTH / CELL_SIZE; x++)
 		{
-			// Put sand in the middle column
+			// Add nonempty particles to the center column of the window
 			if (x == SCREEN_WIDTH / CELL_SIZE / 2)
-				particles[x][y] = Particle(ParticleID::SAND);
+				particles[x][y] = Particle(ParticleID::WATER);
 
 			particles[x][y].Rect.setPosition((float)x * CELL_SIZE, (float)y * CELL_SIZE);
 		}
@@ -72,6 +80,8 @@ int main()
 
 	while (window.isOpen())
 	{
+		oddFrame = !oddFrame;
+
 		// HANDLE INPUT
 		sf::Event event;
 		while (window.pollEvent(event))
@@ -85,28 +95,53 @@ int main()
 		{
 			for (int x = 0; x < SCREEN_WIDTH / CELL_SIZE; x++)
 			{
-				// Get the ID of the current particle
-				ParticleID partID = particles[x][y].ID;
-
-				switch(partID)
+				// Get the ID of the current particle to apply the appropriate rules
+				switch(particles[x][y].ID)
 				{
 					case ParticleID::SAND:
 					{
-						if (x >= 0 && x < SCREEN_WIDTH / CELL_SIZE - 1 && y >= 0 && y < SCREEN_HEIGHT / CELL_SIZE - 1)
+						if (x > 0 && x < SCREEN_WIDTH / CELL_SIZE - 1 && y >= 0 && y < SCREEN_HEIGHT / CELL_SIZE - 1)
 						{
 							// Down empty
 							if (particles[x][y + 1].ID == ParticleID::EMPTY)
 								swapParticles(particles[x][y], particles[x][y + 1]);
 
 							// Down left empty
-							else if (particles[x - 1][y + 1].ID == ParticleID::EMPTY)
+							else if (particles[x - 1][y + 1].ID == ParticleID::EMPTY && oddFrame)
 								swapParticles(particles[x][y], particles[x - 1][y + 1]);
 
 							// Down right empty
-							else if (particles[x + 1][y + 1].ID == ParticleID::EMPTY)
+							else if (particles[x + 1][y + 1].ID == ParticleID::EMPTY && !oddFrame)
 								swapParticles(particles[x][y], particles[x + 1][y + 1]);
 						}
-					}
+					} break;
+
+					// Water behaves similarly to sand, except it also checks as far left and right as possible (to fill its container)
+					case ParticleID::WATER:
+					{
+						if (x > 0 && x < SCREEN_WIDTH / CELL_SIZE - 1 && y >= 0 && y < SCREEN_HEIGHT / CELL_SIZE - 1)
+						{
+							// Down empty
+							if (particles[x][y + 1].ID == ParticleID::EMPTY)
+								swapParticles(particles[x][y], particles[x][y + 1]);
+
+							// Down left empty
+							else if (particles[x - 1][y + 1].ID == ParticleID::EMPTY && oddFrame)
+								swapParticles(particles[x][y], particles[x - 1][y + 1]);
+
+							// Down right empty
+							else if (particles[x + 1][y + 1].ID == ParticleID::EMPTY && !oddFrame)
+								swapParticles(particles[x][y], particles[x + 1][y + 1]);
+
+							// Left empty
+							else if (particles[x - 1][y].ID == ParticleID::EMPTY && oddFrame)
+								swapParticles(particles[x][y], particles[x - 1][y]);
+
+							// Right empty
+							else if (particles[x + 1][y].ID == ParticleID::EMPTY && !oddFrame)
+								swapParticles(particles[x][y], particles[x + 1][y]);
+						}
+					} break;
 
 					// Do nothing if no particle exists at the location
 					case ParticleID::EMPTY:
