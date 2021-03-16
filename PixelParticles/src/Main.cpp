@@ -37,7 +37,7 @@ struct Particle
 	}
 };
 
-// NOTE: This method works for simple simulation, but more complex physics will require a more complex method
+// NOTE: This method works for simple simulation, but more complex physics with velocity and gravity will require a more complex method
 // Swap the color and ID of two particles to simulate their movement
 void swapParticles(Particle& p1, Particle& p2)
 {
@@ -65,16 +65,77 @@ int main()
 	// Vector of cells. Each cell will contain a particle, either empty or of a certain material. Initialize all cells to empty
 	std::vector<std::vector<Particle>> particles((int)(SCREEN_WIDTH / CELL_SIZE), std::vector<Particle>((int)(SCREEN_HEIGHT / CELL_SIZE)));
 
-	// Initialize particle positions and IDs
-	for (int y = 0; y < SCREEN_HEIGHT / CELL_SIZE; y++)
+	// NOTE: In the future, the user will have the ability to place particles, but for now, simulations will be pre-set
+	// Prompt the user to choose a driver program for either the sand or water simulation
 	{
-		for (int x = 0; x < SCREEN_WIDTH / CELL_SIZE; x++)
-		{
-			// Add nonempty particles to the center column of the window
-			if (x == SCREEN_WIDTH / CELL_SIZE / 2)
-				particles[x][y] = Particle(ParticleID::WATER);
+		sf::Font font;
+		if (!font.loadFromFile("cthulhumbus.ttf"))
+			printf("Font load error");
 
-			particles[x][y].Rect.setPosition((float)x * CELL_SIZE, (float)y * CELL_SIZE);
+		sf::Text prompt;
+		prompt.setFont(font);
+		prompt.setString("Choose Simulation:\n\t\t"
+			             "1 : Sand\n\t\t"
+			             "2: Water");
+		prompt.setCharacterSize(24);
+		prompt.setFillColor(sf::Color::White);
+		prompt.setPosition({ SCREEN_HEIGHT / 2, SCREEN_HEIGHT / 2.5});
+
+		// The material to be chosen by the user
+		ParticleID mat = ParticleID::EMPTY;
+
+		bool intro = true;
+		while (intro)
+		{
+			sf::Event event;
+			while (window.pollEvent(event))
+			{
+				if (event.type == sf::Event::Closed)
+				{
+					window.close();
+					intro = false;
+				}
+
+				else if (event.type == sf::Event::KeyPressed)
+				{
+					if (event.key.code == sf::Keyboard::Num1)
+					{
+						mat = ParticleID::SAND;
+						intro = false;
+					}
+					else if (event.key.code == sf::Keyboard::Num2)
+					{
+						intro = false;
+						mat = ParticleID::WATER;
+					}
+				}
+			}
+
+			window.clear();
+			window.draw(prompt);
+			window.display();
+		}
+
+		// Initialize particle positions and IDs
+		for (int y = 0; y < SCREEN_HEIGHT / CELL_SIZE; y++)
+		{
+			for (int x = 0; x < SCREEN_WIDTH / CELL_SIZE; x++)
+			{
+				int middleCol = SCREEN_WIDTH / CELL_SIZE / 2;
+				// Add nonempty particles to the center column of the window
+				if (mat == ParticleID::SAND)
+				{
+					if (x == middleCol)
+						particles[x][y] = Particle(ParticleID::SAND);
+				}
+				else if (mat == ParticleID::WATER)
+				{
+					if (middleCol - x >= -1 && middleCol - x < 1)
+						particles[x][y] = Particle(ParticleID::WATER);
+				}
+
+				particles[x][y].Rect.setPosition((float)x * CELL_SIZE, (float)y * CELL_SIZE);
+			}
 		}
 	}
 
