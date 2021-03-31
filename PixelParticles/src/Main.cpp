@@ -1,7 +1,7 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 
-enum class ParticleID
+enum class ParticleID : uint8_t
 {
 	EMPTY,
 	SAND,
@@ -30,6 +30,7 @@ struct Particle
 
 			case ParticleID::WATER:
 				Rect.setFillColor(sf::Color({ 0, 0, 255 }));
+				break;
 
 			default:
 				break;
@@ -55,6 +56,8 @@ int main()
 	static const uint32_t SCREEN_WIDTH = 800;
 	static const uint32_t SCREEN_HEIGHT = 600;
 	static const uint32_t CELL_SIZE = 10;
+	static const uint32_t NUM_ROWS = SCREEN_HEIGHT / CELL_SIZE;
+	static const uint32_t NUM_COLS = SCREEN_WIDTH / CELL_SIZE;
 
 	// Change value every frame, and use this to allow variation in sand simulation and allow water to flow to the right
 	bool oddFrame = false;
@@ -63,7 +66,7 @@ int main()
 	window.setFramerateLimit(30);
 
 	// Vector of cells. Each cell will contain a particle, either empty or of a certain material. Initialize all cells to empty
-	std::vector<std::vector<Particle>> particles((int)(SCREEN_WIDTH / CELL_SIZE), std::vector<Particle>((int)(SCREEN_HEIGHT / CELL_SIZE)));
+	std::vector<std::vector<Particle>> particles((int)(NUM_COLS), std::vector<Particle>((int)(NUM_ROWS)));
 
 	// NOTE: In the future, the user will have the ability to place particles, but for now, simulations will be pre-set
 	// Prompt the user to choose a driver program for either the sand or water simulation
@@ -75,7 +78,7 @@ int main()
 		sf::Text prompt;
 		prompt.setFont(font);
 		prompt.setString("Choose Simulation:\n\t\t"
-			             "1 : Sand\n\t\t"
+			             " 1: Sand\n\t\t"
 			             "2: Water");
 		prompt.setCharacterSize(24);
 		prompt.setFillColor(sf::Color::White);
@@ -98,15 +101,15 @@ int main()
 
 				else if (event.type == sf::Event::KeyPressed)
 				{
-					if (event.key.code == sf::Keyboard::Num1)
+					if (event.key.code == sf::Keyboard::Num1 || event.key.code == sf::Keyboard::Numpad1)
 					{
 						mat = ParticleID::SAND;
 						intro = false;
 					}
-					else if (event.key.code == sf::Keyboard::Num2)
+					else if (event.key.code == sf::Keyboard::Num2 || event.key.code == sf::Keyboard::Numpad2)
 					{
-						intro = false;
 						mat = ParticleID::WATER;
+						intro = false;
 					}
 				}
 			}
@@ -117,21 +120,28 @@ int main()
 		}
 
 		// Initialize particle positions and IDs
-		for (int y = 0; y < SCREEN_HEIGHT / CELL_SIZE; y++)
+		for (int y = 0; y < NUM_ROWS; y++)
 		{
-			for (int x = 0; x < SCREEN_WIDTH / CELL_SIZE; x++)
+			for (int x = 0; x < NUM_COLS; x++)
 			{
-				int middleCol = SCREEN_WIDTH / CELL_SIZE / 2;
+				int middleCol = NUM_COLS / 2;
 				// Add nonempty particles to the center column of the window
-				if (mat == ParticleID::SAND)
+				switch (mat)
 				{
-					if (x == middleCol)
-						particles[x][y] = Particle(ParticleID::SAND);
-				}
-				else if (mat == ParticleID::WATER)
-				{
-					if (middleCol - x >= -1 && middleCol - x < 1)
-						particles[x][y] = Particle(ParticleID::WATER);
+					case ParticleID::SAND:
+					{
+						if (x == middleCol)
+							particles[x][y] = Particle(ParticleID::SAND);
+					}break;
+
+					case ParticleID::WATER:
+					{
+						if (middleCol - x >= -1 && middleCol - x < 1)
+							particles[x][y] = Particle(ParticleID::WATER);
+					}break;
+					
+					default:
+						break;
 				}
 
 				particles[x][y].Rect.setPosition((float)x * CELL_SIZE, (float)y * CELL_SIZE);
@@ -152,16 +162,16 @@ int main()
 		}
 
 		// UPDATE
-		for (int y = SCREEN_HEIGHT / CELL_SIZE - 1; y >= 0; y--)
+		for (int y = NUM_ROWS - 1; y >= 0; y--)
 		{
-			for (int x = 0; x < SCREEN_WIDTH / CELL_SIZE; x++)
+			for (int x = 0; x < NUM_COLS; x++)
 			{
 				// Get the ID of the current particle to apply the appropriate rules
 				switch(particles[x][y].ID)
 				{
 					case ParticleID::SAND:
 					{
-						if (x > 0 && x < SCREEN_WIDTH / CELL_SIZE - 1 && y >= 0 && y < SCREEN_HEIGHT / CELL_SIZE - 1)
+						if (x > 0 && x < NUM_COLS - 1 && y >= 0 && y < NUM_ROWS - 1)
 						{
 							// Down empty
 							if (particles[x][y + 1].ID == ParticleID::EMPTY)
@@ -180,7 +190,7 @@ int main()
 					// Water behaves similarly to sand, except it also checks as far left and right as possible (to fill its container)
 					case ParticleID::WATER:
 					{
-						if (x > 0 && x < SCREEN_WIDTH / CELL_SIZE - 1 && y >= 0 && y < SCREEN_HEIGHT / CELL_SIZE - 1)
+						if (x > 0 && x < NUM_COLS - 1 && y >= 0 && y < NUM_ROWS - 1)
 						{
 							// Down empty
 							if (particles[x][y + 1].ID == ParticleID::EMPTY)
@@ -217,9 +227,9 @@ int main()
 		// DISPLAY
 		window.clear();
 
-		for (int x = 0; x < SCREEN_WIDTH / CELL_SIZE; x++)
+		for (int x = 0; x < NUM_COLS; x++)
 		{
-			for (int y = 0; y < SCREEN_HEIGHT / CELL_SIZE; y++)
+			for (int y = 0; y < NUM_ROWS; y++)
 				window.draw(particles[x][y].Rect);
 		}
 
