@@ -72,7 +72,7 @@ int main()
 	// Prompt the user to choose a driver program for either the sand or water simulation
 	{
 		sf::Font font;
-		if (!font.loadFromFile("cthulhumbus.ttf"))
+		if (!font.loadFromFile("assets/fonts/cthulhumbus/JMH Cthulhumbus Arcade UG.ttf"))
 			printf("Font load error");
 
 		sf::Text prompt;
